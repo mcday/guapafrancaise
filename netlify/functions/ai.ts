@@ -64,8 +64,8 @@ export default async (request: Request, _context: Context) => {
   }
 
   // Add CORS headers to the response
-  const body = await result.json()
-  return Response.json(body, {
+  const responseBody = await result.json()
+  return Response.json(responseBody, {
     status: result.status,
     headers: corsHeaders(request),
   })
