@@ -46,15 +46,19 @@ function cleanJsonString(raw: string): string {
 }
 
 export function parseDicteeResponse(raw: string, params: DicteeParams): DicteeContent {
-  const jsonStr = cleanJsonString(raw)
-  const parsed = JSON.parse(jsonStr)
-  const validated = DicteeResponseSchema.parse(parsed)
-  return {
-    id: crypto.randomUUID(),
-    ...validated,
-    wordCount: validated.text.split(/\s+/).length,
-    difficulty: params.difficulty,
-    topic: params.topic,
+  try {
+    const jsonStr = cleanJsonString(raw)
+    const parsed = JSON.parse(jsonStr)
+    const validated = DicteeResponseSchema.parse(parsed)
+    return {
+      id: crypto.randomUUID(),
+      ...validated,
+      wordCount: validated.text.split(/\s+/).length,
+      difficulty: params.difficulty,
+      topic: params.topic,
+    }
+  } catch {
+    throw new Error('Réponse invalide du modèle IA. Réessaie.')
   }
 }
 
@@ -62,12 +66,16 @@ export function parseComprehensionResponse(
   raw: string,
   params: ComprehensionParams
 ): ComprehensionQuestion[] {
-  const jsonStr = cleanJsonString(raw)
-  const parsed = JSON.parse(jsonStr)
-  const validated = ComprehensionResponseSchema.parse(parsed)
-  return validated.questions.map((q) => ({
-    ...q,
-    type: params.section,
-    difficulty: params.difficulty,
-  }))
+  try {
+    const jsonStr = cleanJsonString(raw)
+    const parsed = JSON.parse(jsonStr)
+    const validated = ComprehensionResponseSchema.parse(parsed)
+    return validated.questions.map((q) => ({
+      ...q,
+      type: params.section,
+      difficulty: params.difficulty,
+    }))
+  } catch {
+    throw new Error('Réponse invalide du modèle IA. Réessaie.')
+  }
 }

@@ -1,5 +1,4 @@
-import type { TEFAQTopic, DifficultyLevel, DiffResult, ManualError } from './dictee'
-import type { ComprehensionResult } from './comprehension'
+import type { TEFAQTopic, DifficultyLevel } from './dictee'
 
 export type ExercisePhase =
   | 'setup'
@@ -20,17 +19,4 @@ export interface ExerciseRecord {
   dicteeScore: number | null
   comprehensionScore: number | null
   xpEarned: number
-}
-
-export interface ExerciseSession {
-  id: string
-  startedAt: string
-  completedAt?: string
-  mode: 'solo' | 'accompanied'
-  topic: TEFAQTopic
-  difficulty: DifficultyLevel
-  dicteeResult?: DiffResult | { manualErrors: ManualError[]; score: number }
-  comprehensionResult?: ComprehensionResult
-  totalXPEarned: number
-  badgesUnlocked: string[]
 }

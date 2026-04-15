@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, CheckCircle } from 'lucide-react'
 import { QuestionCard } from './QuestionCard'
@@ -13,21 +13,23 @@ export function QuestionSet({ questions, onComplete }: QuestionSetProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [showResult, setShowResult] = useState(false)
+  const answersRef = useRef(answers)
 
   const question = questions[currentIndex]
   const isLast = currentIndex === questions.length - 1
   const selectedAnswer = answers[question.id]
 
   function handleAnswer(optionId: string) {
-    setAnswers((prev) => ({ ...prev, [question.id]: optionId }))
-    // Show result after selecting
+    const updated = { ...answers, [question.id]: optionId }
+    setAnswers(updated)
+    answersRef.current = updated
     setTimeout(() => setShowResult(true), 300)
   }
 
   function handleNext() {
     setShowResult(false)
     if (isLast) {
-      onComplete(answers)
+      onComplete(answersRef.current)
     } else {
       setCurrentIndex((i) => i + 1)
     }

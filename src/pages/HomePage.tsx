@@ -8,7 +8,7 @@ import { getRandomMessage } from '@/components/mascot/alpaca-moods'
 import { useState, useEffect } from 'react'
 
 export function HomePage() {
-  const { currentStreak, totalXP, currentLevel, totalExercises, averageDicteeScore } = useProgressStore()
+  const { currentStreak, totalXP, currentLevel, totalExercises, averageDicteeScore, longestStreak } = useProgressStore()
   const [message, setMessage] = useState('')
 
   useEffect(() => {
@@ -112,7 +112,7 @@ export function HomePage() {
             </div>
             <div>
               <p className="text-gray-400 text-xs mb-1">Meilleure série</p>
-              <p className="font-semibold text-gray-700 text-lg">{useProgressStore.getState().longestStreak} jours</p>
+              <p className="font-semibold text-gray-700 text-lg">{longestStreak} jours</p>
             </div>
             <div>
               <p className="text-gray-400 text-xs mb-1">Niveau actuel</p>

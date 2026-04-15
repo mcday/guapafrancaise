@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { DicteeContent, DiffResult, ManualError, TEFAQTopic, DifficultyLevel } from '@/types/dictee'
 import type { ComprehensionQuestion } from '@/types/comprehension'
 import type { ExercisePhase } from '@/types/exercise'
+import { useSettingsStore } from '@/stores/useSettingsStore'
 
 interface ExerciseState {
   exercisePhase: ExercisePhase
@@ -40,7 +41,7 @@ export const useExerciseStore = create<ExerciseState>()((set) => ({
   exercisePhase: 'setup',
   mode: 'solo',
   topic: 'vie_quotidienne',
-  difficulty: 'B1',
+  difficulty: useSettingsStore.getState().defaultDifficulty,
   dictee: null,
   userText: '',
   diffResult: null,
@@ -72,6 +73,7 @@ export const useExerciseStore = create<ExerciseState>()((set) => ({
   resetExercise: () =>
     set({
       exercisePhase: 'setup',
+      difficulty: useSettingsStore.getState().defaultDifficulty,
       dictee: null,
       userText: '',
       diffResult: null,

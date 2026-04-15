@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router'
+import { createBrowserRouter, Navigate } from 'react-router'
 import { AppShell } from '@/components/layout/AppShell'
 import { HomePage } from '@/pages/HomePage'
 import { DicteePage } from '@/pages/DicteePage'
@@ -15,6 +15,7 @@ export const router = createBrowserRouter([
       { path: 'comprehension', element: <ComprehensionPage /> },
       { path: 'progress', element: <ProgressPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
 ])

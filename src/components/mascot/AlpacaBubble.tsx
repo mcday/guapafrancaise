@@ -1,5 +1,4 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useSettingsStore } from '@/stores/useSettingsStore'
 
 interface AlpacaBubbleProps {
   message: string
@@ -7,9 +6,6 @@ interface AlpacaBubbleProps {
 }
 
 export function AlpacaBubble({ message, visible = true }: AlpacaBubbleProps) {
-  const showHints = useSettingsStore((s) => s.showSpanishHints)
-  void showHints
-
   return (
     <AnimatePresence>
       {visible && (

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { Play, Pause, Headphones, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { ttsService } from '@/services/tts/tts-service'
@@ -75,6 +75,19 @@ export function PassagePlayer({ passage, onComplete }: PassagePlayerProps) {
     }
   }, [isPlaying])
 
+  // Cleanup TTS on unmount
+  useEffect(() => {
+    return () => {
+      ttsService.stop()
+    }
+  }, [])
+
+  // Stable waveform heights
+  const waveHeights = useMemo(
+    () => Array.from({ length: 20 }, () => ({ peak: 20 + Math.random() * 20, dur: 0.5 + Math.random() * 0.5 })),
+    []
+  )
+
   const canListen = listenCount < MAX_LISTENS
   const hasListenedOnce = listenCount >= 1
 
@@ -88,7 +101,7 @@ export function PassagePlayer({ passage, onComplete }: PassagePlayerProps) {
 
         {/* Waveform */}
         <div className="flex items-center justify-center gap-1 h-12">
-          {Array.from({ length: 20 }).map((_, i) => (
+          {waveHeights.map((w, i) => (
             <motion.div
               key={i}
               className={cn(
@@ -98,9 +111,9 @@ export function PassagePlayer({ passage, onComplete }: PassagePlayerProps) {
               animate={
                 isPlaying
                   ? {
-                      height: [8, 20 + Math.random() * 20, 8],
+                      height: [8, w.peak, 8],
                       transition: {
-                        duration: 0.5 + Math.random() * 0.5,
+                        duration: w.dur,
                         repeat: Infinity,
                         delay: i * 0.05,
                       },
@@ -124,6 +137,7 @@ export function PassagePlayer({ passage, onComplete }: PassagePlayerProps) {
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={isPlaying ? togglePause : play}
+              aria-label={isPlaying ? 'Pause' : 'Lecture'}
               className="p-4 rounded-full bg-gradient-to-r from-quebec-500 to-quebec-400 text-white shadow-md hover:shadow-lg transition-shadow"
             >
               {isPlaying ? (

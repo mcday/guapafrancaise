@@ -62,7 +62,6 @@ export class TTSService {
       }
     }
 
-    void utterance
     speechSynthesis.speak(utterance)
   }
 
@@ -100,54 +99,6 @@ export class TTSService {
     }
   }
 
-  // Play a single sentence via cloud TTS, returns the Audio element for control
-  async speakSentence(
-    sentence: string,
-    options: CloudSpeakOptions = {}
-  ): Promise<HTMLAudioElement> {
-    this.stop()
-
-    const blobUrl = await synthesizeSpeech(sentence, { rate: options.rate })
-    const audio = new Audio(blobUrl)
-    audio.playbackRate = options.playbackRate ?? 1.0
-    this._currentAudio = audio
-
-    audio.onplay = () => {
-      this._isSpeaking = true
-      options.onStart?.()
-    }
-    audio.onended = () => {
-      this._isSpeaking = false
-      this._currentAudio = null
-      options.onEnd?.()
-    }
-    audio.onerror = () => {
-      this._isSpeaking = false
-      this._currentAudio = null
-      options.onError?.(new Error('Audio playback failed'))
-    }
-
-    await audio.play()
-    return audio
-  }
-
-  // Try cloud first, fall back to Web Speech API
-  async speakWithCloud(
-    text: string,
-    options: CloudSpeakOptions & { voiceURI?: string } = {}
-  ): Promise<void> {
-    try {
-      await this.speakCloud(text, options)
-    } catch {
-      // Fall back to browser TTS
-      this.speak(text, {
-        voiceURI: options.voiceURI,
-        rate: options.playbackRate ?? options.rate ?? 0.9,
-        onEnd: options.onEnd,
-      })
-    }
-  }
-
   pause() {
     if (this._currentAudio) {
       this._currentAudio.pause()
@@ -159,7 +110,10 @@ export class TTSService {
 
   resume() {
     if (this._currentAudio) {
-      this._currentAudio.play()
+      this._currentAudio.play().catch(() => {
+        this._isSpeaking = false
+        this._currentAudio = null
+      })
       this._isSpeaking = true
     } else {
       speechSynthesis.resume()

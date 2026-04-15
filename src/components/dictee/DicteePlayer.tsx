@@ -6,11 +6,12 @@ import {
   SkipForward,
   RotateCcw,
   Volume2,
-  ListOrdered,
+  Repeat,
+  Timer,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { ttsService } from '@/services/tts/tts-service'
-import { synthesizeSpeech } from '@/services/tts/cloud-tts'
+import { synthesizeSpeech, clearAudioCache } from '@/services/tts/cloud-tts'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useExerciseStore } from '@/stores/useExerciseStore'
 import { cn } from '@/lib/utils'
@@ -21,6 +22,12 @@ interface DicteePlayerProps {
 }
 
 const SPEED_OPTIONS = [0.7, 0.8, 0.9, 1.0] as const
+const PAUSE_OPTIONS = [
+  { label: 'Sans', ms: 0 },
+  { label: 'Légère', ms: 150 },
+  { label: 'Moyenne', ms: 300 },
+  { label: 'Longue', ms: 500 },
+] as const
 
 function splitSentences(text: string): string[] {
   return text
@@ -33,20 +40,40 @@ export function DicteePlayer({ text, onComplete }: DicteePlayerProps) {
   const sentences = useMemo(() => splitSentences(text), [text])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [playAllMode, setPlayAllMode] = useState(false)
+  const [autoAdvance, setAutoAdvance] = useState(false)
   const [speed, setSpeed] = useState<number>(0.9)
-  const [hasPlayedOnce, setHasPlayedOnce] = useState(false)
+  const [wordPauseMs, setWordPauseMs] = useState(0)
 
   const settings = useSettingsStore()
   const incrementReplay = useExerciseStore((s) => s.incrementReplay)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const playAllRef = useRef(false)
+  const autoAdvanceRef = useRef(false)
+  const speedRef = useRef(0.9)
+  const wordPauseMsRef = useRef(0)
+  const ttsProviderRef = useRef(settings.ttsProvider)
+  const ttsVoiceURIRef = useRef(settings.ttsVoiceURI)
+
+  // Stable waveform heights
+  const waveHeights = useMemo(
+    () => Array.from({ length: 20 }, () => ({ peak: 20 + Math.random() * 20, dur: 0.5 + Math.random() * 0.5 })),
+    []
+  )
+
+  // Keep refs in sync with state
+  useEffect(() => { autoAdvanceRef.current = autoAdvance }, [autoAdvance])
+  useEffect(() => { speedRef.current = speed }, [speed])
+  useEffect(() => { wordPauseMsRef.current = wordPauseMs }, [wordPauseMs])
+  useEffect(() => { ttsProviderRef.current = settings.ttsProvider }, [settings.ttsProvider])
+  useEffect(() => { ttsVoiceURIRef.current = settings.ttsVoiceURI }, [settings.ttsVoiceURI])
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       ttsService.stop()
-      playAllRef.current = false
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
     }
   }, [])
 
@@ -55,60 +82,61 @@ export function DicteePlayer({ text, onComplete }: DicteePlayerProps) {
       if (index < 0 || index >= sentences.length) return
 
       ttsService.stop()
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+
       setCurrentIndex(index)
       setIsPlaying(true)
 
-      const useCloud = settings.ttsProvider === 'cloud'
+      const currentSpeed = speedRef.current
+      const currentPause = wordPauseMsRef.current
 
       const handleEnd = () => {
         setIsPlaying(false)
         audioRef.current = null
 
-        // Auto-advance in play-all mode
-        if (playAllRef.current && index < sentences.length - 1) {
+        if (autoAdvanceRef.current && index < sentences.length - 1) {
           playSentence(index + 1)
-        } else {
-          playAllRef.current = false
-          setPlayAllMode(false)
-          if (index === sentences.length - 1) {
-            setHasPlayedOnce(true)
-            onComplete?.()
-          }
+        } else if (index === sentences.length - 1) {
+          onComplete?.()
         }
       }
 
-      if (useCloud) {
+      if (ttsProviderRef.current === 'cloud') {
         try {
-          const blobUrl = await synthesizeSpeech(sentences[index])
+          const blobUrl = await synthesizeSpeech(sentences[index], {
+            wordPauseMs: currentPause > 0 ? currentPause : undefined,
+          })
           const audio = new Audio(blobUrl)
-          audio.playbackRate = speed
+          audio.playbackRate = currentSpeed
           audioRef.current = audio
           audio.onended = handleEnd
           audio.onerror = () => {
-            // Fall back to browser TTS
             ttsService.speak(sentences[index], {
-              voiceURI: settings.ttsVoiceURI,
-              rate: speed,
+              voiceURI: ttsVoiceURIRef.current,
+              rate: currentSpeed,
               onEnd: handleEnd,
             })
           }
           await audio.play()
         } catch {
           ttsService.speak(sentences[index], {
-            voiceURI: settings.ttsVoiceURI,
-            rate: speed,
+            voiceURI: ttsVoiceURIRef.current,
+            rate: currentSpeed,
             onEnd: handleEnd,
           })
         }
       } else {
         ttsService.speak(sentences[index], {
-          voiceURI: settings.ttsVoiceURI,
-          rate: speed,
+          voiceURI: ttsVoiceURIRef.current,
+          rate: currentSpeed,
           onEnd: handleEnd,
         })
       }
     },
-    [sentences, settings.ttsProvider, settings.ttsVoiceURI, speed, onComplete]
+    [sentences, onComplete]
   )
 
   const handlePlayPause = useCallback(() => {
@@ -120,7 +148,7 @@ export function DicteePlayer({ text, onComplete }: DicteePlayerProps) {
       }
       setIsPlaying(false)
     } else if (audioRef.current) {
-      audioRef.current.play()
+      audioRef.current.play().catch(() => setIsPlaying(false))
       setIsPlaying(true)
     } else {
       playSentence(currentIndex)
@@ -129,16 +157,12 @@ export function DicteePlayer({ text, onComplete }: DicteePlayerProps) {
 
   const handlePrev = useCallback(() => {
     if (currentIndex > 0) {
-      playAllRef.current = false
-      setPlayAllMode(false)
       playSentence(currentIndex - 1)
     }
   }, [currentIndex, playSentence])
 
   const handleNext = useCallback(() => {
     if (currentIndex < sentences.length - 1) {
-      playAllRef.current = false
-      setPlayAllMode(false)
       playSentence(currentIndex + 1)
     }
   }, [currentIndex, sentences.length, playSentence])
@@ -148,31 +172,22 @@ export function DicteePlayer({ text, onComplete }: DicteePlayerProps) {
     playSentence(currentIndex)
   }, [currentIndex, playSentence, incrementReplay])
 
-  const handlePlayAll = useCallback(() => {
-    if (playAllMode) {
-      // Stop play-all
-      playAllRef.current = false
-      setPlayAllMode(false)
-      ttsService.stop()
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current = null
-      }
-      setIsPlaying(false)
-    } else {
-      playAllRef.current = true
-      setPlayAllMode(true)
-      if (hasPlayedOnce) incrementReplay()
-      playSentence(0)
-    }
-  }, [playAllMode, hasPlayedOnce, playSentence, incrementReplay])
-
   const handleSpeedChange = useCallback(
     (newSpeed: number) => {
       setSpeed(newSpeed)
+      speedRef.current = newSpeed
       if (audioRef.current) {
         audioRef.current.playbackRate = newSpeed
       }
+    },
+    []
+  )
+
+  const handlePauseChange = useCallback(
+    (ms: number) => {
+      setWordPauseMs(ms)
+      wordPauseMsRef.current = ms
+      clearAudioCache()
     },
     []
   )
@@ -191,7 +206,7 @@ export function DicteePlayer({ text, onComplete }: DicteePlayerProps) {
 
       {/* Waveform */}
       <div className="flex items-center justify-center gap-1 h-12">
-        {Array.from({ length: 20 }).map((_, i) => (
+        {waveHeights.map((w, i) => (
           <motion.div
             key={i}
             className={cn(
@@ -201,9 +216,9 @@ export function DicteePlayer({ text, onComplete }: DicteePlayerProps) {
             animate={
               isPlaying
                 ? {
-                    height: [8, 20 + Math.random() * 20, 8],
+                    height: [8, w.peak, 8],
                     transition: {
-                      duration: 0.5 + Math.random() * 0.5,
+                      duration: w.dur,
                       repeat: Infinity,
                       delay: i * 0.05,
                     },
@@ -219,11 +234,9 @@ export function DicteePlayer({ text, onComplete }: DicteePlayerProps) {
         {sentences.map((_, i) => (
           <button
             key={i}
-            onClick={() => {
-              playAllRef.current = false
-              setPlayAllMode(false)
-              playSentence(i)
-            }}
+            onClick={() => playSentence(i)}
+            aria-label={`Phrase ${i + 1}`}
+            aria-current={i === currentIndex ? 'true' : undefined}
             className={cn(
               'w-2 h-2 rounded-full transition-all',
               i === currentIndex
@@ -242,8 +255,9 @@ export function DicteePlayer({ text, onComplete }: DicteePlayerProps) {
           whileTap={{ scale: 0.9 }}
           onClick={handlePrev}
           disabled={currentIndex === 0}
+          aria-label="Phrase précédente"
           className={cn(
-            'p-2.5 rounded-full transition-colors',
+            'p-3 rounded-full transition-colors',
             currentIndex === 0
               ? 'bg-gray-50 text-gray-300'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -255,7 +269,8 @@ export function DicteePlayer({ text, onComplete }: DicteePlayerProps) {
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={handleRepeat}
-          className="p-2.5 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+          aria-label="Répéter"
+          className="p-3 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
         >
           <RotateCcw className="w-4 h-4" />
         </motion.button>
@@ -263,6 +278,7 @@ export function DicteePlayer({ text, onComplete }: DicteePlayerProps) {
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={handlePlayPause}
+          aria-label={isPlaying ? 'Pause' : 'Lecture'}
           className="p-4 rounded-full bg-gradient-to-r from-terracotta-500 to-terracotta-400 text-white shadow-md hover:shadow-lg transition-shadow"
         >
           {isPlaying ? (
@@ -276,8 +292,9 @@ export function DicteePlayer({ text, onComplete }: DicteePlayerProps) {
           whileTap={{ scale: 0.9 }}
           onClick={handleNext}
           disabled={currentIndex === sentences.length - 1}
+          aria-label="Phrase suivante"
           className={cn(
-            'p-2.5 rounded-full transition-colors',
+            'p-3 rounded-full transition-colors',
             currentIndex === sentences.length - 1
               ? 'bg-gray-50 text-gray-300'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -288,35 +305,56 @@ export function DicteePlayer({ text, onComplete }: DicteePlayerProps) {
 
         <motion.button
           whileTap={{ scale: 0.9 }}
-          onClick={handlePlayAll}
+          onClick={() => setAutoAdvance(!autoAdvance)}
+          aria-label={autoAdvance ? 'Lecture continue activée' : 'Lecture continue désactivée'}
           className={cn(
-            'p-2.5 rounded-full transition-colors',
-            playAllMode
+            'p-3 rounded-full transition-colors',
+            autoAdvance
               ? 'bg-terracotta-100 text-terracotta-600'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           )}
-          title="Lire tout"
         >
-          <ListOrdered className="w-4 h-4" />
+          <Repeat className="w-4 h-4" />
         </motion.button>
       </div>
 
       {/* Speed controls */}
-      <div className="flex items-center justify-center gap-1.5">
-        {SPEED_OPTIONS.map((s) => (
-          <button
-            key={s}
-            onClick={() => handleSpeedChange(s)}
-            className={cn(
-              'px-2.5 py-1 rounded-lg text-xs font-medium transition-all',
-              speed === s
-                ? 'bg-terracotta-500 text-white'
-                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-            )}
-          >
-            {s.toFixed(1)}x
-          </button>
-        ))}
+      <div className="space-y-2">
+        <div className="flex items-center justify-center gap-1.5">
+          {SPEED_OPTIONS.map((s) => (
+            <button
+              key={s}
+              onClick={() => handleSpeedChange(s)}
+              className={cn(
+                'px-2.5 py-1 rounded-lg text-xs font-medium transition-all',
+                speed === s
+                  ? 'bg-terracotta-500 text-white'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              )}
+            >
+              {s.toFixed(1)}x
+            </button>
+          ))}
+        </div>
+
+        {/* Word pause controls */}
+        <div className="flex items-center justify-center gap-1.5">
+          <Timer className="w-3 h-3 text-gray-400 mr-0.5" />
+          {PAUSE_OPTIONS.map((p) => (
+            <button
+              key={p.ms}
+              onClick={() => handlePauseChange(p.ms)}
+              className={cn(
+                'px-2 py-1 rounded-lg text-[11px] font-medium transition-all',
+                wordPauseMs === p.ms
+                  ? 'bg-quebec-500 text-white'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              )}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )

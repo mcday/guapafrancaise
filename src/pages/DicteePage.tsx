@@ -53,7 +53,6 @@ export function DicteePage() {
     (errorCount: number, totalWords: number) => {
       const accuracy = totalWords > 0 ? Math.round(((totalWords - errorCount) / totalWords) * 100) : 0
       store.setDicteeScore(accuracy)
-      store.setPhase('correcting')
     },
     [store]
   )
@@ -102,10 +101,11 @@ export function DicteePage() {
       // Apply rewards
       progress.addXP(totalXP)
       progress.updateStreak()
-      if (store.dicteeScore !== null) {
-        progress.recordExercise('dictee', store.dicteeScore, store.mode)
-      }
-      progress.recordExercise('comprehension', score)
+      // Record once for the full exercise (dictée + comprehension)
+      const combinedScore = store.dicteeScore !== null
+        ? Math.round((store.dicteeScore + score) / 2)
+        : score
+      progress.recordExercise('dictee', combinedScore, store.mode)
 
       // Record in history
       history.addExercise({
@@ -147,7 +147,7 @@ export function DicteePage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {store.exercisePhase !== 'setup' && (
-            <button onClick={handleReset} className="p-2 rounded-xl bg-gray-100 text-gray-500">
+            <button onClick={handleReset} aria-label="Retour" className="p-2 rounded-xl bg-gray-100 text-gray-500">
               <ArrowLeft className="w-4 h-4" />
             </button>
           )}

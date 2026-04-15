@@ -4,8 +4,10 @@ import type { DifficultyLevel } from '@/types/dictee'
 import type { AIProviderType } from '@/types/settings'
 
 type TTSProvider = 'cloud' | 'browser'
+type AIMode = 'server' | 'browser'
 
 interface SettingsState {
+  aiMode: AIMode
   aiProvider: AIProviderType
   claudeApiKey: string
   geminiApiKey: string
@@ -18,6 +20,7 @@ interface SettingsState {
   showSpanishHints: boolean
   soundEnabled: boolean
 
+  setAiMode: (mode: AIMode) => void
   setAiProvider: (provider: AIProviderType) => void
   setApiKey: (provider: AIProviderType, key: string) => void
   setClaudeModel: (model: string) => void
@@ -33,6 +36,7 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
+      aiMode: 'server',
       aiProvider: 'claude',
       claudeApiKey: '',
       geminiApiKey: '',
@@ -45,6 +49,7 @@ export const useSettingsStore = create<SettingsState>()(
       showSpanishHints: true,
       soundEnabled: true,
 
+      setAiMode: (mode) => set({ aiMode: mode }),
       setAiProvider: (provider) => set({ aiProvider: provider }),
       setApiKey: (provider, key) =>
         set(provider === 'claude' ? { claudeApiKey: key } : { geminiApiKey: key }),
@@ -57,6 +62,15 @@ export const useSettingsStore = create<SettingsState>()(
       toggleSpanishHints: () => set((s) => ({ showSpanishHints: !s.showSpanishHints })),
       toggleSound: () => set((s) => ({ soundEnabled: !s.soundEnabled })),
     }),
-    { name: 'tefaq-settings', version: 1 }
+    {
+      name: 'tefaq-settings',
+      version: 1,
+      partialize: (state) => {
+        const { claudeApiKey, geminiApiKey, ...rest } = state
+        void claudeApiKey
+        void geminiApiKey
+        return rest
+      },
+    }
   )
 )

@@ -93,7 +93,7 @@ export function ProgressPage() {
             {exercises.slice(0, 10).map((ex) => (
               <div key={ex.id} className="flex items-center justify-between bg-white rounded-xl px-3 py-2.5 shadow-sm border border-gray-50">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">{ex.type === 'dictee' ? 'Dictée' : 'Compréhension'}</p>
+                  <p className="text-sm font-medium text-gray-700">{ex.type === 'dictee' ? 'Dictée' : ex.type === 'full' ? 'Dictée + Compréhension' : 'Compréhension'}</p>
                   <p className="text-[11px] text-gray-400">{new Date(ex.date).toLocaleDateString('fr-CA')}</p>
                 </div>
                 <div className="text-right">

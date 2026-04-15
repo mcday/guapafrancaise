@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2, Home, RotateCcw } from 'lucide-react'
 import { Link } from 'react-router'
 import { useAI } from '@/hooks/useAI'
+import { clearAudioCache } from '@/services/tts/cloud-tts'
 import { useProgressStore } from '@/stores/useProgressStore'
 import { useHistoryStore } from '@/stores/useHistoryStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -22,9 +23,8 @@ type Phase = 'setup' | 'generating' | 'listening' | 'questions' | 'results'
 export function ComprehensionPage() {
   const [phase, setPhase] = useState<Phase>('setup')
   const [topic, setTopic] = useState<TEFAQTopic>('vie_quotidienne')
-  const [difficulty, setDifficulty] = useState<DifficultyLevel>(
-    useSettingsStore.getState().defaultDifficulty
-  )
+  const defaultDifficulty = useSettingsStore((s) => s.defaultDifficulty)
+  const [difficulty, setDifficulty] = useState<DifficultyLevel>(defaultDifficulty)
   const [questions, setQuestions] = useState<ComprehensionQuestion[]>([])
   const [passageText, setPassageText] = useState('')
   const [score, setScore] = useState<number | null>(null)
@@ -90,6 +90,7 @@ export function ComprehensionPage() {
   )
 
   const handleReset = () => {
+    clearAudioCache()
     setPhase('setup')
     setQuestions([])
     setPassageText('')

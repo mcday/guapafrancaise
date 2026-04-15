@@ -13,6 +13,7 @@ export function GamificationOverlays() {
 
   const prevXP = useRef(useProgressStore.getState().totalXP)
   const prevLevel = useRef(useProgressStore.getState().currentLevel.id)
+  const timeoutIds = useRef<ReturnType<typeof setTimeout>[]>([])
 
   useEffect(() => {
     const unsub = useProgressStore.subscribe((state) => {
@@ -23,24 +24,32 @@ export function GamificationOverlays() {
       }
 
       // Level up check
-      if (state.currentLevel.id > prevLevel.current) {
-        setTimeout(() => {
+      const didLevelUp = state.currentLevel.id > prevLevel.current
+      if (didLevelUp) {
+        const id = setTimeout(() => {
           setLevelUp({ level: state.currentLevel, visible: true })
-        }, 2000) // Delay after XP toast
+        }, 2000)
+        timeoutIds.current.push(id)
       }
 
-      // Badge check
-      const newBadges = checkNewBadges()
-      if (newBadges.length > 0) {
-        setTimeout(() => {
-          setBadgeUnlock({ badge: newBadges[0], visible: true })
-        }, levelUp ? 4000 : 2500) // After level up if there is one
-      }
+      // Badge check — defer to avoid Zustand subscriber re-entry
+      queueMicrotask(() => {
+        const newBadges = checkNewBadges()
+        if (newBadges.length > 0) {
+          const id = setTimeout(() => {
+            setBadgeUnlock({ badge: newBadges[0], visible: true })
+          }, didLevelUp ? 4000 : 2500)
+          timeoutIds.current.push(id)
+        }
+      })
 
       prevXP.current = state.totalXP
       prevLevel.current = state.currentLevel.id
     })
-    return unsub
+    return () => {
+      unsub()
+      timeoutIds.current.forEach(clearTimeout)
+    }
   }, [])
 
   return (

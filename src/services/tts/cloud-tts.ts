@@ -3,10 +3,11 @@ const audioCache = new Map<string, string>()
 interface SynthesizeOptions {
   voice?: string
   rate?: number
+  wordPauseMs?: number
 }
 
 function cacheKey(text: string, opts?: SynthesizeOptions): string {
-  return `${text}|${opts?.voice ?? ''}|${opts?.rate ?? ''}`
+  return `${text}|${opts?.voice ?? ''}|${opts?.rate ?? ''}|${opts?.wordPauseMs ?? ''}`
 }
 
 export async function synthesizeSpeech(
@@ -24,6 +25,7 @@ export async function synthesizeSpeech(
       text,
       voice: options?.voice,
       rate: options?.rate,
+      wordPauseMs: options?.wordPauseMs,
     }),
   })
 
