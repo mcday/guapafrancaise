@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  /* Breakpoints */
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+  --breakpoint-2xl: 96rem;
+
+  /* Container sizes (Tailwind v4 only ships sm, lg, 2xl, 4xl) */
+  --container-xs: 20rem;
+  --container-md: 28rem;
+  --container-xl: 36rem;
+  --container-3xl: 48rem;
+  --container-5xl: 64rem;
+  --container-6xl: 72rem;
+  --container-7xl: 80rem;
+
+  /* Peru + Quebec palette */
+  --color-terracotta-50: #fef3ed;
+  --color-terracotta-100: #fde4d4;
+  --color-terracotta-200: #f9c5a8;
+  --color-terracotta-300: #f5a070;
+  --color-terracotta-400: #ef7a3c;
+  --color-terracotta-500: #e85d1a;
+  --color-terracotta-600: #c44512;
+  --color-terracotta-700: #9c3412;
+  --color-terracotta-800: #7d2c16;
+  --color-terracotta-900: #672815;
+
+  --color-gold-50: #fefce8;
+  --color-gold-100: #fef9c3;
+  --color-gold-200: #fef08a;
+  --color-gold-300: #fde047;
+  --color-gold-400: #f9c80e;
+  --color-gold-500: #e9b308;
+  --color-gold-600: #ca8a04;
+
+  --color-turquoise-50: #effefa;
+  --color-turquoise-100: #c7fff0;
+  --color-turquoise-200: #90fde2;
+  --color-turquoise-300: #51f0cf;
+  --color-turquoise-400: #1dd9b4;
+  --color-turquoise-500: #06c09e;
+  --color-turquoise-600: #029b81;
+
+  --color-quebec-50: #eff3ff;
+  --color-quebec-100: #dbe3fe;
+  --color-quebec-200: #bfcefe;
+  --color-quebec-300: #93aafd;
+  --color-quebec-400: #6078fa;
+  --color-quebec-500: #3b4ff6;
+  --color-quebec-600: #2830eb;
+  --color-quebec-700: #1e22d0;
+  --color-quebec-800: #1f20a9;
+  --color-quebec-900: #1e2085;
+
+  --color-neige: #f8fafc;
+  --color-creme: #fffbf0;
+
+  --color-correct: #1dd9b4;
+  --color-incorrect: #ef4444;
+  --color-missing: #f59e0b;
+  --color-xp: #f9c80e;
+  --color-streak: #f97316;
+
+  --font-display: "Fredoka", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+html {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-neige);
+  color: #1a1a2e;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 9999px;
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
