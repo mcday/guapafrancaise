@@ -1,16 +1,13 @@
 import { useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Loader2, Home, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Loader2, Home, RotateCcw, PenLine } from 'lucide-react'
 import { useExerciseStore } from '@/stores/useExerciseStore'
 import { useProgressStore } from '@/stores/useProgressStore'
 import { useHistoryStore } from '@/stores/useHistoryStore'
 import { useAI } from '@/hooks/useAI'
-import { computeDicteeDiff } from '@/services/diff/dictee-diff'
 import { calculateDicteeXP, calculateComprehensionXP } from '@/services/diff/scoring'
 import { DicteeSetup } from '@/components/dictee/DicteeSetup'
 import { DicteePlayer } from '@/components/dictee/DicteePlayer'
-import { DicteeInput } from '@/components/dictee/DicteeInput'
-import { DiffDisplay } from '@/components/dictee/DiffDisplay'
 import { DicteeScore } from '@/components/dictee/DicteeScore'
 import { ManualCorrection } from '@/components/dictee/ManualCorrection'
 import { QuestionSet } from '@/components/comprehension/QuestionSet'
@@ -40,14 +37,6 @@ export function DicteePage() {
       store.setPhase('setup')
     }
   }, [store, generateDictee])
-
-  const handleDicteeSubmit = useCallback(() => {
-    if (!store.dictee) return
-    const result = computeDicteeDiff(store.dictee.text, store.userText)
-    store.setDiffResult(result)
-    store.setDicteeScore(result.stats.accuracy)
-    store.setPhase('correcting')
-  }, [store])
 
   const handleManualCorrectionComplete = useCallback(
     (errorCount: number, totalWords: number) => {
@@ -197,7 +186,24 @@ export function DicteePage() {
         {store.exercisePhase === 'listening' && store.dictee && (
           <motion.div key="listening" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0">
             <DicteePlayer text={store.dictee.text} />
-            <DicteeInput onSubmit={handleDicteeSubmit} />
+            <div className="space-y-4">
+              <div className="bg-terracotta-50 rounded-2xl p-5 border border-terracotta-100 text-center">
+                <PenLine className="w-8 h-8 text-terracotta-400 mx-auto mb-3" />
+                <p className="font-display font-semibold text-terracotta-700">
+                  Écris sur papier
+                </p>
+                <p className="text-sm text-terracotta-500 mt-1">
+                  Écoute la dictée et écris sur une feuille
+                </p>
+              </div>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => store.setPhase('correcting')}
+                className="w-full py-3.5 bg-terracotta-500 text-white font-display font-semibold rounded-2xl shadow-md hover:bg-terracotta-600 transition-colors"
+              >
+                C'est fait ! Corriger
+              </motion.button>
+            </div>
           </motion.div>
         )}
 
@@ -229,21 +235,8 @@ export function DicteePage() {
           </motion.div>
         )}
 
-        {store.exercisePhase === 'correcting' && store.mode === 'solo' && store.diffResult && (
-          <motion.div key="correcting-solo" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 lg:items-start">
-            <DiffDisplay result={store.diffResult} />
-            {dicteeXPBreakdown && (
-              <DicteeScore
-                stats={store.diffResult.stats}
-                xpBreakdown={dicteeXPBreakdown}
-                onContinue={handleContinueToQuestions}
-              />
-            )}
-          </motion.div>
-        )}
-
-        {store.exercisePhase === 'correcting' && store.mode === 'accompanied' && store.dictee && (
-          <motion.div key="correcting-accompanied" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+        {store.exercisePhase === 'correcting' && store.dictee && (
+          <motion.div key="correcting" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-4">
             <ManualCorrection
               referenceText={store.dictee.text}
               onComplete={handleManualCorrectionComplete}
