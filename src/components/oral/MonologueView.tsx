@@ -13,6 +13,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import type { ConversationTurn } from '@/types/oral'
 
 const SILENCE_TIMEOUT_MS = 2000
+const MAX_NO_SPEECH_RESTARTS = 3
 
 interface MonologueViewProps {
   onEnd: () => void
@@ -28,22 +29,22 @@ export function MonologueView({ onEnd }: MonologueViewProps) {
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined)
   const handleEndRef = useRef<() => void>(() => {})
 
-  // Silence detection
+  // Recording session state (spans multiple single-mode restarts)
+  const isSessionActiveRef = useRef(false)
+  const [pendingText, setPendingText] = useState('')
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const isRecordingRef = useRef(false)
   const [isPendingSubmit, setIsPendingSubmit] = useState(false)
+  const noSpeechCountRef = useRef(0)
 
-  // Keep refs to avoid stale closures in the silence timer
+  // Stable ref for timer callback
   const handleUserInputRef = useRef<(text: string) => void>(() => {})
-  const stopListeningRef = useRef(stopListening)
-  stopListeningRef.current = stopListening
 
   const scenario = store.scenario!
 
   // Scroll on updates
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-  }, [store.turns.length, interimTranscript])
+  }, [store.turns.length, interimTranscript, pendingText, transcript])
 
   // Timer
   useEffect(() => {
@@ -51,12 +52,17 @@ export function MonologueView({ onEnd }: MonologueViewProps) {
     return () => clearInterval(timerRef.current)
   }, [])
 
-  // Auto-end after max time (uses ref to avoid stale closure)
+  // Auto-end after max time
   useEffect(() => {
     if (elapsedSeconds >= scenario.speakingTimeSeconds) {
       handleEndRef.current()
     }
   }, [elapsedSeconds, scenario.speakingTimeSeconds])
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => clearTimeout(silenceTimerRef.current)
+  }, [])
 
   // AI opening line
   useEffect(() => {
@@ -70,17 +76,25 @@ export function MonologueView({ onEnd }: MonologueViewProps) {
 
   const speakText = useCallback((text: string) => {
     store.setAISpeaking(true)
+    const safety = setTimeout(() => store.setAISpeaking(false), Math.max(10000, text.length * 150))
+
+    const onSpeakEnd = () => {
+      clearTimeout(safety)
+      store.setAISpeaking(false)
+    }
+
     if (ttsProvider === 'cloud') {
       ttsService.speakCloud(text, {
         rate: ttsRate,
-        onEnd: () => store.setAISpeaking(false),
+        onEnd: onSpeakEnd,
         onError: () => {
+          clearTimeout(safety)
           store.setAISpeaking(false)
           ttsService.speak(text, { rate: ttsRate, onEnd: () => store.setAISpeaking(false) })
         },
       })
     } else {
-      ttsService.speak(text, { rate: ttsRate, onEnd: () => store.setAISpeaking(false) })
+      ttsService.speak(text, { rate: ttsRate, onEnd: onSpeakEnd })
     }
   }, [store, ttsProvider, ttsRate])
 
@@ -88,8 +102,8 @@ export function MonologueView({ onEnd }: MonologueViewProps) {
     const userTurn: ConversationTurn = { role: 'user', text, timestamp: Date.now() }
     store.addTurn(userTurn)
     resetTranscript()
+    setPendingText('')
 
-    // Section B: AI responds with objections
     store.setAIThinking(true)
     const allTurns = [...store.turns, userTurn]
     const response = await getAIResponse({
@@ -106,85 +120,103 @@ export function MonologueView({ onEnd }: MonologueViewProps) {
     }
   }, [store, scenario, getAIResponse, resetTranscript, speakText])
 
-  // Keep input ref in sync
+  // Keep ref in sync
   handleUserInputRef.current = handleUserInput
 
-  // Silence detection: submit after 2s of no speech activity
+  // When single-mode recognition auto-ends during an active session
   useEffect(() => {
-    if (!isRecordingRef.current) return
+    if (!isListening && isSessionActiveRef.current) {
+      if (transcript.trim()) {
+        noSpeechCountRef.current = 0
+        const newPending = pendingText
+          ? pendingText + ' ' + transcript.trim()
+          : transcript.trim()
+        setPendingText(newPending)
 
-    clearTimeout(silenceTimerRef.current)
+        clearTimeout(silenceTimerRef.current)
+        setIsPendingSubmit(true)
+        silenceTimerRef.current = setTimeout(() => {
+          isSessionActiveRef.current = false
+          setIsPendingSubmit(false)
+          handleUserInputRef.current(newPending)
+        }, SILENCE_TIMEOUT_MS)
+      } else {
+        noSpeechCountRef.current++
+      }
 
-    // If user is mid-word (interim results), don't start the timer
-    if (interimTranscript) {
-      setIsPendingSubmit(false)
-      return
+      if (noSpeechCountRef.current < MAX_NO_SPEECH_RESTARTS) {
+        resetTranscript()
+        startListening('single')
+      } else {
+        isSessionActiveRef.current = false
+        if (pendingText) {
+          setIsPendingSubmit(false)
+          clearTimeout(silenceTimerRef.current)
+          handleUserInputRef.current(pendingText)
+        }
+      }
     }
-
-    // If we have accumulated text and no interim, start the silence countdown
-    if (transcript.trim()) {
-      setIsPendingSubmit(true)
-      silenceTimerRef.current = setTimeout(() => {
-        stopListeningRef.current()
-        isRecordingRef.current = false
-        setIsPendingSubmit(false)
-        handleUserInputRef.current(transcript.trim())
-      }, SILENCE_TIMEOUT_MS)
-    }
-
-    return () => clearTimeout(silenceTimerRef.current)
-  }, [transcript, interimTranscript])
-
-  // Clean up silence timer on unmount
-  useEffect(() => {
-    return () => clearTimeout(silenceTimerRef.current)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isListening])
 
   const handleMicToggle = useCallback(() => {
-    if (isRecordingRef.current) {
-      // Manual stop: submit immediately
+    if (isSessionActiveRef.current) {
       clearTimeout(silenceTimerRef.current)
       stopListening()
-      isRecordingRef.current = false
+      isSessionActiveRef.current = false
       setIsPendingSubmit(false)
-      if (transcript.trim()) {
-        handleUserInput(transcript.trim())
+      noSpeechCountRef.current = 0
+
+      const fullText = pendingText
+        + (transcript.trim() ? (pendingText ? ' ' : '') + transcript.trim() : '')
+
+      setPendingText('')
+      if (fullText) {
+        handleUserInput(fullText)
       }
     } else {
-      // Start recording in continuous mode
+      // Interrupt AI if speaking
+      ttsService.stop()
+      store.setAISpeaking(false)
+
+      setPendingText('')
       resetTranscript()
-      isRecordingRef.current = true
-      startListening('continuous')
+      noSpeechCountRef.current = 0
+      isSessionActiveRef.current = true
+      startListening('single')
     }
-  }, [stopListening, startListening, resetTranscript, transcript, handleUserInput])
+  }, [stopListening, startListening, resetTranscript, transcript, pendingText, handleUserInput, store])
 
   const handleEnd = useCallback(() => {
     clearTimeout(silenceTimerRef.current)
     if (isListening) stopListening()
-    isRecordingRef.current = false
+    isSessionActiveRef.current = false
     setIsPendingSubmit(false)
-    if (transcript.trim()) {
-      const userTurn: ConversationTurn = { role: 'user', text: transcript.trim(), timestamp: Date.now() }
+
+    const fullText = pendingText
+      + (transcript.trim() ? (pendingText ? ' ' : '') + transcript.trim() : '')
+
+    if (fullText) {
+      const userTurn: ConversationTurn = { role: 'user', text: fullText, timestamp: Date.now() }
       store.addTurn(userTurn)
     }
     ttsService.stop()
     onEnd()
-  }, [isListening, stopListening, transcript, store, onEnd])
+  }, [isListening, stopListening, transcript, pendingText, store, onEnd])
 
-  // Keep ref in sync so the timer effect always calls the latest handleEnd
   handleEndRef.current = handleEnd
 
-  const isInputDisabled = store.isAISpeaking || store.isAIThinking
-  const isRecording = isListening && isRecordingRef.current
+  const isMicDisabled = store.isAIThinking
+  const liveText = [pendingText, transcript, interimTranscript].filter(Boolean).join(' ')
+  const showLiveBubble = isSessionActiveRef.current && liveText
 
-  // Status text
   const statusText = store.isAISpeaking
-    ? "Ton ami(e) parle..."
+    ? "Ton ami(e) parle... (appuyez pour interrompre)"
     : store.isAIThinking
       ? "Ton ami(e) réfléchit..."
       : isPendingSubmit
         ? 'Pause détectée... Envoi automatique dans 2s'
-        : isRecording
+        : isListening
           ? 'Écoute en cours... Parlez librement.'
           : 'Appuyez sur le micro pour parler'
 
@@ -198,13 +230,8 @@ export function MonologueView({ onEnd }: MonologueViewProps) {
           <TranscriptBubble key={i} role={turn.role} text={turn.text} />
         ))}
 
-        {/* Live transcript (interim + accumulated) */}
-        {isRecording && (transcript || interimTranscript) && (
-          <TranscriptBubble
-            role="user"
-            text={transcript + (interimTranscript ? (transcript ? ' ' : '') + interimTranscript : '')}
-            isInterim
-          />
+        {showLiveBubble && (
+          <TranscriptBubble role="user" text={liveText} isInterim />
         )}
 
         {store.isAIThinking && (
@@ -228,9 +255,9 @@ export function MonologueView({ onEnd }: MonologueViewProps) {
         {inputMode === 'voice' ? (
           <div className="flex items-center justify-center gap-4">
             <MicButton
-              isListening={isRecording}
+              isListening={isSessionActiveRef.current && isListening}
               isProcessing={store.isAIThinking}
-              disabled={isInputDisabled}
+              disabled={isMicDisabled}
               onClick={handleMicToggle}
             />
             <motion.button
@@ -246,7 +273,7 @@ export function MonologueView({ onEnd }: MonologueViewProps) {
           <div className="space-y-2">
             <TextInputFallback
               onSubmit={handleUserInput}
-              disabled={isInputDisabled}
+              disabled={store.isAIThinking}
               placeholder="Développez vos arguments..."
             />
             <button onClick={handleEnd} className="w-full py-2 rounded-xl bg-gray-100 text-gray-600 text-sm font-medium">
