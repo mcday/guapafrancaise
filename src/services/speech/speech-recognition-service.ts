@@ -7,7 +7,8 @@
 type RecognitionMode = 'single' | 'continuous'
 
 interface SpeechRecognitionCallbacks {
-  onResult?: (transcript: string, isFinal: boolean) => void
+  /** Called with the full accumulated transcript each time results update */
+  onResult?: (finalTranscript: string, interimTranscript: string) => void
   onEnd?: () => void
   onError?: (error: string) => void
 }
@@ -51,23 +52,21 @@ export class SpeechRecognitionService {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.recognition.onresult = (event: any) => {
+      // Always rebuild from ALL results (index 0) to avoid duplication
+      // on mobile browsers that re-fire events for the same results
       let finalTranscript = ''
       let interimTranscript = ''
 
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i]
         if (result.isFinal) {
-          finalTranscript += result[0].transcript
+          finalTranscript += result[0].transcript + ' '
         } else {
           interimTranscript += result[0].transcript
         }
       }
 
-      if (finalTranscript) {
-        callbacks.onResult?.(finalTranscript, true)
-      } else if (interimTranscript) {
-        callbacks.onResult?.(interimTranscript, false)
-      }
+      callbacks.onResult?.(finalTranscript.trim(), interimTranscript)
     }
 
     this.recognition.onend = () => {
