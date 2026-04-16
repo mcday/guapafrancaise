@@ -22,18 +22,21 @@ interface ProgressState {
   totalExercises: number
   totalDictees: number
   totalComprehension: number
+  totalOral: number
   totalAccompanied: number
   perfectDictees: number
   averageDicteeScore: number
   averageComprehensionScore: number
+  averageOralScore: number
   dicteeScoreSum: number
   comprehensionScoreSum: number
+  oralScoreSum: number
 
   addXP: (amount: number) => void
   updateStreak: () => void
   unlockBadge: (badgeId: string) => void
   markBadgeSeen: (badgeId: string) => void
-  recordExercise: (type: 'dictee' | 'comprehension', score: number, mode?: 'solo' | 'accompanied') => void
+  recordExercise: (type: 'dictee' | 'comprehension' | 'oral', score: number, mode?: 'solo' | 'accompanied') => void
 }
 
 export const useProgressStore = create<ProgressState>()(
@@ -49,12 +52,15 @@ export const useProgressStore = create<ProgressState>()(
       totalExercises: 0,
       totalDictees: 0,
       totalComprehension: 0,
+      totalOral: 0,
       totalAccompanied: 0,
       perfectDictees: 0,
       averageDicteeScore: 0,
       averageComprehensionScore: 0,
+      averageOralScore: 0,
       dicteeScoreSum: 0,
       comprehensionScoreSum: 0,
+      oralScoreSum: 0,
 
       addXP: (amount) =>
         set((state) => {
@@ -105,6 +111,12 @@ export const useProgressStore = create<ProgressState>()(
             updates.dicteeScoreSum = newSum
             updates.averageDicteeScore = Math.round(newSum / newCount)
             if (score === 100) updates.perfectDictees = state.perfectDictees + 1
+          } else if (type === 'oral') {
+            const newSum = state.oralScoreSum + score
+            const newCount = state.totalOral + 1
+            updates.totalOral = newCount
+            updates.oralScoreSum = newSum
+            updates.averageOralScore = Math.round(newSum / newCount)
           } else {
             const newSum = state.comprehensionScoreSum + score
             const newCount = state.totalComprehension + 1
@@ -118,6 +130,18 @@ export const useProgressStore = create<ProgressState>()(
           return updates as ProgressState
         }),
     }),
-    { name: 'tefaq-progress', version: 1 }
+    {
+      name: 'tefaq-progress',
+      version: 2,
+      migrate: (persisted: unknown, version: number) => {
+        const state = persisted as Record<string, unknown>
+        if (version < 2) {
+          state.totalOral = 0
+          state.oralScoreSum = 0
+          state.averageOralScore = 0
+        }
+        return state as unknown as ProgressState
+      },
+    }
   )
 )

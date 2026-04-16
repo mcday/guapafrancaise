@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { PenLine, Headphones, Flame, Trophy, Target } from 'lucide-react'
+import { PenLine, Headphones, Mic, Flame, Trophy, Target } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useProgressStore } from '@/stores/useProgressStore'
 import { Alpaca } from '@/components/mascot/Alpaca'
@@ -63,7 +63,7 @@ export function HomePage() {
       {/* Quick Start Buttons */}
       <div>
         <h3 className="font-display font-semibold text-gray-700 lg:text-lg mb-3">Pratiquer</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-5">
           <Link to="/dictee">
             <motion.div
               whileHover={{ scale: 1.02 }}
@@ -91,6 +91,21 @@ export function HomePage() {
               <div>
                 <p className="font-display font-semibold text-lg">Compréhension</p>
                 <p className="text-sm text-white/80">Questions TEFAQ</p>
+              </div>
+            </motion.div>
+          </Link>
+          <Link to="/oral">
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              className="flex items-center gap-4 bg-gradient-to-r from-gold-500 to-gold-400 text-white rounded-2xl p-5 lg:p-6 shadow-md hover:shadow-lg transition-shadow"
+            >
+              <div className="bg-white/20 rounded-xl p-3">
+                <Mic className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="font-display font-semibold text-lg">Oral</p>
+                <p className="text-sm text-white/80">Simulateur TEFAQ</p>
               </div>
             </motion.div>
           </Link>

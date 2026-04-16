@@ -19,6 +19,7 @@ export const DIFFICULTY_LABELS: Record<DifficultyLevel, { fr: string; es: string
   B1: { fr: 'Intermédiaire', es: 'Intermedio' },
   'B1+': { fr: 'Intermédiaire avancé', es: 'Intermedio avanzado' },
   B2: { fr: 'Avancé (TEFAQ)', es: 'Avanzado (TEFAQ)' },
+  C1: { fr: 'Supérieur', es: 'Superior' },
 }
 
 export const LEVELS: Level[] = [
@@ -54,14 +55,20 @@ export const BADGES: Badge[] = [
   { id: 'accompanied_5', name: "Travail d'Équipe", nameEs: 'Trabajo en Equipo', description: '5 exercices en mode accompagné', descriptionEs: '5 ejercicios en modo acompañado', icon: 'heart-handshake', category: 'special', condition: { type: 'accompanied_mode', count: 5 } },
   { id: 'level_5', name: 'Demi-Sommet', nameEs: 'Media Cumbre', description: 'Atteindre le niveau 5', descriptionEs: 'Alcanzar el nivel 5', icon: 'mountain', category: 'special', condition: { type: 'level_reached', level: 5 } },
   { id: 'level_10', name: 'Sommet Atteint', nameEs: 'Cumbre Alcanzada', description: 'Atteindre le niveau 10', descriptionEs: 'Alcanzar el nivel 10', icon: 'mountain-snow', category: 'special', condition: { type: 'level_reached', level: 10 } },
+  // Oral
+  { id: 'oral_1', name: 'Première Parole', nameEs: 'Primera Palabra', description: 'Complète ton premier oral', descriptionEs: 'Completa tu primer oral', icon: 'mic', category: 'volume', condition: { type: 'total_oral', count: 1 } },
+  { id: 'oral_10', name: 'Orateur', nameEs: 'Orador', description: '10 exercices oraux', descriptionEs: '10 ejercicios orales', icon: 'mic', category: 'volume', condition: { type: 'total_oral', count: 10 } },
+  { id: 'oral_90', name: 'Éloquente', nameEs: 'Elocuente', description: '90% de score moyen à l\'oral', descriptionEs: '90% de puntuación promedio en oral', icon: 'mic', category: 'accuracy', condition: { type: 'oral_accuracy', percentage: 90, minExercises: 3 } },
 ]
 
 export const XP_RULES = {
-  dicteeBase: { A2: 10, B1: 15, 'B1+': 20, B2: 30 } as Record<DifficultyLevel, number>,
+  dicteeBase: { A2: 10, B1: 15, 'B1+': 20, B2: 30, C1: 40 } as Record<DifficultyLevel, number>,
   dicteeAccuracyBonus: 5,       // per 10% above 60%
   perfectDicteeBonus: 25,
-  comprehensionBase: { A2: 10, B1: 12, 'B1+': 15, B2: 20 } as Record<DifficultyLevel, number>,
+  comprehensionBase: { A2: 10, B1: 12, 'B1+': 15, B2: 20, C1: 28 } as Record<DifficultyLevel, number>,
   comprehensionCorrectBonus: 5, // per correct above 50%
+  oralBase: { A2: 15, B1: 20, 'B1+': 25, B2: 35, C1: 50 } as Record<DifficultyLevel, number>,
+  oralAccuracyBonus: 5,         // per 10% above 40%
   dailyFirstBonus: 10,
   streakBonus: 5,               // per 5 days
   accompaniedBonus: 5,

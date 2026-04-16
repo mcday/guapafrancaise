@@ -1,4 +1,4 @@
-export type DifficultyLevel = 'A2' | 'B1' | 'B1+' | 'B2'
+export type DifficultyLevel = 'A2' | 'B1' | 'B1+' | 'B2' | 'C1'
 
 export type TEFAQTopic =
   | 'vie_quotidienne'

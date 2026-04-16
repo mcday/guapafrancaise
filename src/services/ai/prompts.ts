@@ -7,6 +7,7 @@ const DIFFICULTY_GUIDELINES: Record<DifficultyLevel, string> = {
   B1: 'Phrases composées, connecteurs logiques, imparfait, futur, conditionnel présent, vocabulaire varié',
   'B1+': 'Structures complexes, subjonctif présent, discours indirect, vocabulaire soutenu, expressions idiomatiques',
   B2: 'Toutes structures grammaticales, nuances de sens, registres variés, expressions idiomatiques et québécoises, phrases longues avec relatives',
+  C1: 'Registre soutenu et littéraire, subjonctif passé et plus-que-parfait, phrases complexes imbriquées, vocabulaire rare et spécialisé, nuances stylistiques fines, expressions québécoises recherchées',
 }
 
 const WORD_COUNTS: Record<DifficultyLevel, string> = {
@@ -14,6 +15,7 @@ const WORD_COUNTS: Record<DifficultyLevel, string> = {
   B1: '60-90',
   'B1+': '90-130',
   B2: '100-150',
+  C1: '150-200',
 }
 
 const SECTION_LABELS: Record<TEFAQSection, string> = {

@@ -81,6 +81,7 @@ export function ComprehensionPage() {
         difficulty,
         dicteeScore: null,
         comprehensionScore: s,
+        oralScore: null,
         xpEarned: xp,
       })
 
@@ -139,7 +140,7 @@ export function ComprehensionPage() {
             <div className="space-y-2">
               <h3 className="font-display font-semibold text-gray-700 text-sm">Niveau</h3>
               <div className="flex gap-2">
-                {(['A2', 'B1', 'B1+', 'B2'] as const).map((level) => (
+                {(['A2', 'B1', 'B1+', 'B2', 'C1'] as const).map((level) => (
                   <button
                     key={level}
                     onClick={() => setDifficulty(level)}

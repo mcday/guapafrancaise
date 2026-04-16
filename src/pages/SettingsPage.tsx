@@ -272,7 +272,7 @@ export function SettingsPage() {
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-600">Niveau par défaut</label>
           <div className="flex gap-2">
-            {(['A2', 'B1', 'B1+', 'B2'] as const).map((level) => (
+            {(['A2', 'B1', 'B1+', 'B2', 'C1'] as const).map((level) => (
               <button
                 key={level}
                 onClick={() => settings.setDefaultDifficulty(level)}

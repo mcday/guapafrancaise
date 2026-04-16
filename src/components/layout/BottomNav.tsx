@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router'
-import { Home, PenLine, Headphones, BarChart3, Settings } from 'lucide-react'
+import { Home, PenLine, Headphones, Mic, BarChart3, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Alpaca } from '@/components/mascot/Alpaca'
 
@@ -7,7 +7,12 @@ const navItems = [
   { to: '/', icon: Home, label: 'Accueil' },
   { to: '/dictee', icon: PenLine, label: 'Dictée' },
   { to: '/comprehension', icon: Headphones, label: 'Écoute' },
+  { to: '/oral', icon: Mic, label: 'Oral' },
   { to: '/progress', icon: BarChart3, label: 'Progrès' },
+]
+
+const desktopNavItems = [
+  ...navItems,
   { to: '/settings', icon: Settings, label: 'Réglages' },
 ]
 
@@ -53,7 +58,7 @@ export function BottomNav() {
 
         {/* Nav items */}
         <nav className="flex-1 py-4 px-3 space-y-1">
-          {navItems.map(({ to, icon: Icon, label }) => (
+          {desktopNavItems.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
               to={to}

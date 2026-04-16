@@ -1,7 +1,7 @@
 import { useProgressStore } from '@/stores/useProgressStore'
 import { useHistoryStore } from '@/stores/useHistoryStore'
 import { BADGES } from '@/lib/constants'
-import { Flame, Trophy, Target, Star, Lock } from 'lucide-react'
+import { Flame, Trophy, Target, Star, Lock, Mic } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
@@ -49,6 +49,8 @@ export function ProgressPage() {
           { icon: Trophy, label: 'Exercices', value: progress.totalExercises, color: 'text-gold-500' },
           { icon: Target, label: 'Précision dictée', value: `${progress.averageDicteeScore}%`, color: 'text-turquoise-500' },
           { icon: Star, label: 'Dictées parfaites', value: progress.perfectDictees, color: 'text-terracotta-500' },
+          { icon: Mic, label: 'Exercices oraux', value: progress.totalOral, color: 'text-quebec-500' },
+          { icon: Mic, label: 'Score oral moyen', value: `${progress.averageOralScore}%`, color: 'text-gold-500' },
         ].map(({ icon: Icon, label, value, color }) => (
           <div key={label} className="bg-white rounded-xl p-3 shadow-sm border border-gray-50">
             <Icon className={cn('w-4 h-4 mb-1', color)} />
@@ -93,12 +95,14 @@ export function ProgressPage() {
             {exercises.slice(0, 10).map((ex) => (
               <div key={ex.id} className="flex items-center justify-between bg-white rounded-xl px-3 py-2.5 shadow-sm border border-gray-50">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">{ex.type === 'dictee' ? 'Dictée' : ex.type === 'full' ? 'Dictée + Compréhension' : 'Compréhension'}</p>
+                  <p className="text-sm font-medium text-gray-700">
+                  {ex.type === 'dictee' ? 'Dictée' : ex.type === 'full' ? 'Dictée + Compréhension' : ex.type === 'oral_a' ? 'Oral — Section A' : ex.type === 'oral_b' ? 'Oral — Section B' : 'Compréhension'}
+                </p>
                   <p className="text-[11px] text-gray-400">{new Date(ex.date).toLocaleDateString('fr-CA')}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold text-terracotta-500">
-                    {ex.dicteeScore ?? ex.comprehensionScore ?? 0}%
+                    {ex.oralScore ?? ex.dicteeScore ?? ex.comprehensionScore ?? 0}%
                   </p>
                   <p className="text-[11px] text-gold-500 font-medium">+{ex.xpEarned} XP</p>
                 </div>

@@ -37,6 +37,12 @@ export function checkNewBadges(): Badge[] {
       case 'accompanied_mode':
         earned = state.totalAccompanied >= c.count
         break
+      case 'total_oral':
+        earned = state.totalOral >= c.count
+        break
+      case 'oral_accuracy':
+        earned = state.totalOral >= c.minExercises && state.averageOralScore >= c.percentage
+        break
     }
 
     if (earned) {

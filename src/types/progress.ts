@@ -20,6 +20,8 @@ export type BadgeCondition =
   | { type: 'level_reached'; level: number }
   | { type: 'perfect_dictee'; count: number }
   | { type: 'accompanied_mode'; count: number }
+  | { type: 'total_oral'; count: number }
+  | { type: 'oral_accuracy'; percentage: number; minExercises: number }
 
 export interface Badge {
   id: string

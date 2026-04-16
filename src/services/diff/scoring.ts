@@ -56,3 +56,13 @@ export function calculateComprehensionXP(
   const bonus = Math.floor(above50 / 20) * XP_RULES.comprehensionCorrectBonus
   return baseXP + bonus
 }
+
+export function calculateOralXP(
+  score: number, // 0-100
+  difficulty: DifficultyLevel
+): number {
+  const baseXP = XP_RULES.oralBase[difficulty]
+  const above40 = Math.max(0, score - 40)
+  const accuracyBonus = Math.floor(above40 / 10) * XP_RULES.oralAccuracyBonus
+  return baseXP + accuracyBonus
+}

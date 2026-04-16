@@ -28,7 +28,7 @@ export function DicteePage() {
     const dictee = await generateDictee({
       topic: store.topic,
       difficulty: store.difficulty,
-      sentenceCount: store.difficulty === 'A2' ? 4 : store.difficulty === 'B2' ? 6 : 5,
+      sentenceCount: store.difficulty === 'A2' ? 4 : store.difficulty === 'B2' ? 6 : store.difficulty === 'C1' ? 7 : 5,
     })
     if (dictee) {
       store.setDictee(dictee)
@@ -106,6 +106,7 @@ export function DicteePage() {
         difficulty: store.difficulty,
         dicteeScore: store.dicteeScore,
         comprehensionScore: score,
+        oralScore: null,
         xpEarned: totalXP,
       })
 
